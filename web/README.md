@@ -33,7 +33,7 @@ The build is emitted to `dist/`. Serve it over HTTP/HTTPS rather than opening `i
 6. Open each 3MF in Bambu Studio, retain 100% global scale, confirm **A1 / 0.4 mm / PLA High Speed / textured PEI**, then **slice before printing**.
 7. **Retirar placas descargadas y seguir** removes the downloaded products from the pending order. Downloading a file does not start a physical print or confirm that it has printed.
 
-Orders are stored in browser local storage. Export/import JSON to transfer an order between devices. There is no server synchronization. Each order is limited to 100 products.
+Orders and unfinished designs are saved automatically in browser local storage on every edit and restored when the page is reopened. This includes quantities, selected parts, scale/position adjustments, in-progress edits (with cancel restoration), and unfinished batch-name lists. Existing session drafts migrate automatically. Export/import JSON to transfer an order between devices. There is no server synchronization. Each order is limited to 100 products.
 
 ## Packing
 
@@ -87,7 +87,7 @@ The site exports **arranged projects, not G-code**. It does not send jobs to a p
 - Expanded preview supports 1×–5× visual zoom, two-pointer pinch, drag, and reset. Visual zoom never changes model dimensions.
 - On touch layouts, 3D starts with vertical page scrolling available. **Girar / acercar** enables model interaction; **Terminar giro** restores page scrolling.
 - A fixed plate shortcut is hidden when the software keyboard is detected.
-- Session draft recovery, cancel-edit restoration, and a 10-second undo action after removing a product.
+- Persistent draft recovery after closing the page, cancel-edit restoration, and a 10-second undo action after removing a product.
 - Model tabs support arrow keys, Home, and End; focus is visible and reduced-motion preferences are respected.
 - On mobile, Enter/Done finishes a field without accidentally submitting a product. Desktop form keyboard submission remains available.
 
