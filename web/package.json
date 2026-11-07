@@ -1,0 +1,23 @@
+{
+  "name": "taller-navideno-a1",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "@fontsource-variable/dm-sans": "^5.3.0",
+    "@fontsource-variable/fraunces": "^5.3.0",
+    "fflate": "0.8.3",
+    "manifold-3d": "3.5.4",
+    "opentype.js": "2.0.0",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "vite": "8.3.6"
+  }
+}
