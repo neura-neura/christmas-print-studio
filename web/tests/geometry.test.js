@@ -6,3 +6,19 @@ test('photo unit includes connected frame/loop and separate back',()=>{const us=
 test('sphere connects whole name bow and flakes; inner ring remains70mm',()=>{const us=engine.generate({model:'sphere',name:'Lupita',left:true,right:true});assert.equal(us.length,1);const solids=us[0].parts.map(manifold);const whole=M.Manifold.union(solids);assert.equal(whole.status(),'NoError');const cs=whole.decompose();assert.equal(cs.length,1);cs.forEach(x=>x.delete());whole.delete();solids.forEach(x=>x.delete());});
 test('ring inner diameter is70mm after browser generation and name does not change it',()=>{const u=engine.generate({model:'sphere',name:'Guadalupe'})[0];const base=manifold(u.parts[0]);const section=base.slice(1);const circles=section.toPolygons().filter(p=>{const xs=p.map(v=>v[0]),ys=p.map(v=>v[1]);const w=Math.max(...xs)-Math.min(...xs),h=Math.max(...ys)-Math.min(...ys);return Math.abs(w-70)<.01&&Math.abs(h-70)<.01;});assert.equal(circles.length,1);section.delete();base.delete();});
 test('invalid manual dimensions and unsupported characters fail before export',()=>{for(const d of [{model:'name',name:'🎄'},{model:'name',name:'Lupita',nameOnlyAdjust:{scale:200}},{model:'sphere',name:'Lupita',nameAdjust:{scale:'not-a-number'}},{model:'sphere',name:'Lupita',bowAdjust:{x:100}}])assert.throws(()=>engine.generate(d));});
+test('live sphere previews match printable outlines through toggles, sizing and position edits',()=>{
+ for(const design of [
+  {model:'sphere',name:'Koko'},
+  {model:'sphere',name:'Koko',left:true,right:true},
+  {model:'sphere',name:'Koko',left:true,right:true,leftAdjust:{scale:120,x:1,y:0},nameAdjust:{scale:150}},
+  {model:'sphere',name:'Koko',bow:false,left:true,right:true,rightAdjust:{scale:110,x:0,y:1}},
+ ]){
+  const p=engine.preview(design)[0],full=engine.generate(design)[0];
+  assert.ok(Math.abs(p.width-full.width)<.001);assert.ok(Math.abs(p.height-full.height)<.001);
+  const parts=p.previewParts.map(ps=>new M.CrossSection(ps,'EvenOdd'));
+  const union=M.CrossSection.union(parts),actual=new M.CrossSection(full.footprint,'EvenOdd');
+  const delta=union.subtract(actual),inverse=actual.subtract(union);
+  assert.ok(delta.area()+inverse.area()<.01,'preview must include the exact printable part silhouettes and text bridges');
+  [delta,inverse,actual,union,...parts].forEach(x=>x.delete());
+ }
+});

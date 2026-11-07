@@ -50,6 +50,13 @@ export function createGeometryEngine(M, assets, fontBuffer) {
     }throw new Error('El nombre tiene demasiadas piezas separadas.');
   }
   const transformPart=(s,adjust={})=>{const amount=Number(adjust.scale??100)/100;if(![amount,Number(adjust.x||0),Number(adjust.y||0)].every(Number.isFinite)||Math.abs(Number(adjust.x||0))>20||Math.abs(Number(adjust.y||0))>20||amount<.25||amount>1.5)throw new Error('Tamaño fuera de rango.');const b=s.boundingBox();const c=b.min.map((x,i)=>(x+b.max[i])/2);return own(own(own(s.translate(c.map(x=>-x))).scale([amount,amount,1])).translate([c[0]+Number(adjust.x||0),c[1]+Number(adjust.y||0),c[2]]));};
+  function sphereText(design){
+      let shape=outline(design.name);const adj=design.nameAdjust||{};const amount=Number(adj.scale??100)/100;if(![amount,Number(adj.x||0),Number(adj.y||0)].every(Number.isFinite)||Math.abs(Number(adj.x||0))>20||Math.abs(Number(adj.y||0))>20||amount<.25||amount>1.5)throw new Error('Usa un tamaño entre 25 y 150 %.');
+      shape=own(own(own(shape.translate(CENTER.map(x=>-x))).scale(amount)).translate([CENTER[0]+Number(adj.x||0),CENTER[1]+Number(adj.y||0)]));let under=connectedShape(shape,.7*SCALE);
+      const outer=own(own(own(M.CrossSection.circle(37.677626*SCALE,720)).scale([1,37.81348/37.677626])).translate(CENTER));const inner=own(own(M.CrossSection.circle(35,720)).translate(CENTER));const ring=own(outer.subtract(inner));
+      for(const side of [-1,1]){const box=own(own(M.CrossSection.square([60,65],true)).translate([CENTER[0]+side*50,CENTER[1]]));const target=own(ring.intersect(box));const pair=nearest(under,target);let end=pair.b;if(pair.distance>.001){const dx=(end[0]-pair.a[0])/pair.distance,dy=(end[1]-pair.a[1])/pair.distance;end=[end[0]+dx*2.2*SCALE,end[1]+dy*2.2*SCALE];}under=add(under,capsule(pair.a,end,.95*SCALE));}
+    return {shape,under};
+  }
   function generate(design){owned=[];try{
     const mode=design.model||'sphere';let parts=[],labels=[];
     if(mode==='photo'){
@@ -59,10 +66,7 @@ export function createGeometryEngine(M, assets, fontBuffer) {
       const under=connectedShape(shape,1);let s=solidUnion([extrude(shape,4),extrude(under,1.2)]);b=s.boundingBox();const size=b.max.map((x,i)=>x-b.min[i]);const amount=Number(design.nameOnlyAdjust?.scale??100)/100;if(!Number.isFinite(amount)||amount<.25||amount>1)throw new Error('Usa un tamaño entre 25 y 100 %.');
       const fit=Math.min(Math.sqrt(SIZING.targetVolume/s.volume()),200/size[0],100/size[1])*amount;s=own(s.scale([fit,fit,1]));assertSolid(s,'El nombre');parts=[s];labels=[`Nombre — ${design.name}`];
     }else{
-      let shape=outline(design.name);const adj=design.nameAdjust||{};const amount=Number(adj.scale??100)/100;if(![amount,Number(adj.x||0),Number(adj.y||0)].every(Number.isFinite)||Math.abs(Number(adj.x||0))>20||Math.abs(Number(adj.y||0))>20||amount<.25||amount>1.5)throw new Error('Usa un tamaño entre 25 y 150 %.');
-      shape=own(own(own(shape.translate(CENTER.map(x=>-x))).scale(amount)).translate([CENTER[0]+Number(adj.x||0),CENTER[1]+Number(adj.y||0)]));let under=connectedShape(shape,.7*SCALE);
-      const outer=own(own(own(M.CrossSection.circle(37.677626*SCALE,720)).scale([1,37.81348/37.677626])).translate(CENTER));const inner=own(own(M.CrossSection.circle(35,720)).translate(CENTER));const ring=own(outer.subtract(inner));
-      for(const side of [-1,1]){const box=own(own(M.CrossSection.square([60,65],true)).translate([CENTER[0]+side*50,CENTER[1]]));const target=own(ring.intersect(box));const pair=nearest(under,target);let end=pair.b;if(pair.distance>.001){const dx=(end[0]-pair.a[0])/pair.distance,dy=(end[1]-pair.a[1])/pair.distance;end=[end[0]+dx*2.2*SCALE,end[1]+dy*2.2*SCALE];}under=add(under,capsule(pair.a,end,.95*SCALE));}
+      const {shape,under}=sphereText(design);
       const text=solidUnion([extrude(shape,4),extrude(under,1.4)]);assertSolid(text,'El nombre');
       parts=[importMesh(assets.sphere.base)];labels=['Aro de 70 mm y argolla'];
       if(design.bow!==false){parts.push(transformPart(importMesh(assets.sphere.bow),design.bowAdjust));labels.push('Moño');}
@@ -80,5 +84,38 @@ export function createGeometryEngine(M, assets, fontBuffer) {
       return {piece:index,parts:result,footprint,width:max[0]-min[0],height:max[1]-min[1],depth:max[2]-min[2],volume:group.solids.reduce((v,s)=>v+s.volume(),0),label:mode==='photo'?labels[index]:mode==='name'?`Nombre · ${design.name}`:`Esfera · ${design.name}`};
     });
   }finally{cleanup();}}
-  return {generate};
+  // Preview keeps the exact text/connection outlines but never rebuilds or
+  // unions the high-resolution 3D ornament meshes while a control is moving.
+  const previewTemplates=new Map(),previewText=new Map();
+  function template(key){
+    if(!previewTemplates.has(key))previewTemplates.set(key,own(importMesh(assets.sphere[key]).project()).toPolygons());
+    return previewTemplates.get(key);
+  }
+  function preview(design){
+    if((design.model||'sphere')!=='sphere')return generate(design).map(({parts,...unit})=>unit);
+    owned=[];
+    try{
+      const textKey=JSON.stringify([design.name,design.nameAdjust]);
+      if(!previewText.has(textKey)){
+        const {shape,under}=sphereText(design);
+        previewText.set(textKey,add(shape,under).toPolygons());
+        if(previewText.size>20)previewText.delete(previewText.keys().next().value);
+      }
+      const polygons=[template('base')];
+      function adjusted(key,adjust={}){
+        const ps=template(key),points=ps.flat(),xs=points.map(p=>p[0]),ys=points.map(p=>p[1]);
+        const cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2;
+        const scale=Number(adjust.scale??100)/100,x=Number(adjust.x||0),y=Number(adjust.y||0);
+        if(![scale,x,y].every(Number.isFinite)||scale<.25||scale>1.5||Math.abs(x)>20||Math.abs(y)>20)throw new Error('Tamaño fuera de rango.');
+        return ps.map(p=>p.map(v=>[(v[0]-cx)*scale+cx+x,(v[1]-cy)*scale+cy+y]));
+      }
+      if(design.bow!==false)polygons.push(adjusted('bow',design.bowAdjust));
+      polygons.push(previewText.get(textKey));
+      for(const key of ['left','right'])if(design[key])polygons.push(adjusted(key,design[`${key}Adjust`]));
+      const points=polygons.flat(2),xs=points.map(p=>p[0]),ys=points.map(p=>p[1]);
+      const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys),cx=(minX+maxX)/2,cy=(minY+maxY)/2;
+      return [{piece:0,width:maxX-minX,height:maxY-minY,previewParts:polygons.map(ps=>ps.map(p=>p.map(v=>[v[0]-cx,v[1]-cy])))}];
+    }finally{cleanup();}
+  }
+  return {generate,preview};
 }

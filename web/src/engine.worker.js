@@ -21,7 +21,7 @@ function processOrder(entries,requestId){let items=[],errors=[];unitById=new Map
 }
 self.onmessage=async ({data})=>{try{
  if(data.type==='init'){await initialize(data.urls);postMessage({type:'ready'});}
- else if(data.type==='preview'){const units=make(data.design);postMessage({type:'preview',id:data.id,units:units.map(({parts,...unit})=>unit)});}
+ else if(data.type==='preview'){const units=engine.preview(data.design);postMessage({type:'preview',id:data.id,units:units.map(({parts,...unit})=>unit)});}
  else if(data.type==='order'){if(!engine)throw new Error('El taller todavía está iniciando.');processOrder(data.entries,data.id);}
  else if(data.type==='export'){if(!lastResult||lastResult.errors.length)throw new Error('Corrige los modelos pendientes antes de descargar.');const binary=data.all?exportAll(lastResult.plates,unitById,assets.settings,options):exportPlate(lastResult.plates[data.index],unitById,assets.settings,{options,plateNumber:data.index+1});postMessage({type:'download',id:data.id,all:data.all,index:data.index,binary},[binary.buffer]);}
 }catch(error){postMessage({type:'error',source:data.type,id:data.id,message:error.message||String(error)});}};
