@@ -29,3 +29,11 @@ test('malformed data and unavailable storage do not prevent the app from opening
  const blocked={getItem(){throw Error('blocked');},setItem(){throw Error('quota');}};
  assert.deepEqual(loadProgress(blocked),{entries:[],draft:null});assert.equal(saveProgress(blocked,[entry],null),false);
 });
+test('new ornament designs and their editable bow/name settings survive reopening',()=>{
+ const local=storage();
+ for(const model of ['paw','mouse']){
+  const design={model,name:'Coco',nameAdjust:{scale:90,x:2,y:-1},bowAdjust:{scale:95,x:1,y:0},bow:false};
+  saveProgress(local,[{id:model,quantity:2,design}],{design,part:'nameAdjust',quantity:'3'});
+  const saved=loadProgress(local,storage());assert.equal(saved.entries[0].design.model,model);assert.deepEqual(saved.draft.design,design);
+ }
+});

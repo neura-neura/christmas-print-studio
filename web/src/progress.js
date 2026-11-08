@@ -1,5 +1,5 @@
 export const PROGRESS_KEY='taller-navidad-a1-v1';
-const models=['sphere','photo','name'];
+const models=['sphere','photo','name','paw','mouse'];
 export function validDesign(d){return d&&models.includes(d.model)&&typeof d.name==='string'&&d.name.length<=40;}
 export function validEntry(e){return e&&typeof e.id==='string'&&validDesign(e.design)&&Number.isInteger(e.quantity)&&e.quantity>0&&e.quantity<=100;}
 function read(storage,key){try{return JSON.parse(storage?.getItem(key)||'null');}catch{return null;}}

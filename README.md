@@ -42,15 +42,17 @@ Generated names and named ornaments use the balanced **A1 / 0.4 mm nozzle / Gene
 
 Final material use and printing time are calculated by Bambu Studio. Calibration, adhesion, filament condition, and a physical first-print check still matter.
 
+The two additional customizable ornaments are **Paw with name** and **Mouse with bow**. Both use the bundled Cream Cake Bold font, connected lettering, and the same A1 print profile. The paw uses a 70 mm name zone; the mouse has a 70 mm inner face diameter. Its ears make the complete model wider than a plain circular ornament.
+
 ## Native macOS app
 
 Download the DMG from **[Releases](https://github.com/neura-neura/christmas-print-studio/releases/latest)**, open it, and drag **Esferas.app** into **Applications**. A separate ZIP of the application is also provided.
 
 **Requirements:** Apple Silicon Mac, macOS 14 or later. The Python runtime, geometry libraries, and font are bundled; Python and Homebrew are not required on the target machine. The app is locally/ad-hoc signed, **not Developer ID signed or Apple-notarized**.
 
-The Mac app includes the three model types, a live native 3D preview, editable dimensions/positions, a save-location dialog, and temporary 3MF handoff to Bambu Studio. Batch plate production and the latest touch-oriented workflow are features of the web version. The bundled Mac version is **2.5.0**.
+The Mac app includes all five model types, a live native 3D preview, editable dimensions/positions, a save-location dialog, and temporary 3MF handoff to Bambu Studio. Batch plate production and the latest touch-oriented workflow are features of the web version. The bundled Mac version is **2.6.0**.
 
-Standalone names include a centered hanging eyelet with a fixed 4 mm opening. The complete model, including the eyelet, stays within the size and volume limits.
+Standalone names include a compact, flared hanging eyelet with a fixed 4 mm opening, integrated at the local letter edge rather than raised on a stalk. The complete model, including the eyelet, stays within the size and volume limits.
 
 The native photo-ornament mode preserves the supplied prepared project. The web version adds a tiny recessed connection at the hanging loop before treating the front and back as separate packing units; see the [web documentation](web/README.md).
 
@@ -85,7 +87,7 @@ python3.14 -m venv .venv
 .venv/bin/python scripts/build.py
 ```
 
-The script creates `dist/Esferas-2.5.0-arm64.dmg` without installing it. It builds the standalone engine with PyInstaller, compiles the AppKit/SceneKit application, signs it locally, and creates and verifies a drag-to-Applications disk image.
+The script creates `dist/Esferas-2.6.0-arm64.dmg` without installing it. It builds the standalone engine with PyInstaller, compiles the AppKit/SceneKit application, signs it locally, and creates and verifies a drag-to-Applications disk image.
 
 To regenerate the browser model bundle from the native resources:
 

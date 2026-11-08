@@ -168,7 +168,7 @@ final class Controller:NSObject, NSApplicationDelegate, NSTextFieldDelegate, NST
         for button in [bow,left,right] {button.target=self;button.action=#selector(toggle);button.state = button===bow ? .on : .off}
         selection.addItems(withTitles:["Nombre","Moño","Copo izquierdo","Copo derecho"]);selection.target=self;selection.action=#selector(selectPart)
         rows=[AdjustmentRow(title:"Tamaño (%)",min:25,max:150,tag:0,target:self),AdjustmentRow(title:"Horizontal (mm)",min:-20,max:20,tag:1,target:self),AdjustmentRow(title:"Vertical (mm)",min:-20,max:20,tag:2,target:self)]
-        modelPicker.addItems(withTitles:["Esfera con nombre","Esfera con foto","Nombre solo"]);modelPicker.target=self;modelPicker.action=#selector(modelChanged)
+        modelPicker.addItems(withTitles:["Esfera con nombre","Esfera con foto","Nombre solo","Patita con nombre","Ratoncito con moño"]);modelPicker.target=self;modelPicker.action=#selector(modelChanged)
         let reset=NSButton(title:"Restablecer ajuste",target:self,action:#selector(resetPart));reset.bezelStyle = .rounded
         cameraModes.target=self;cameraModes.action=#selector(cameraMode(_:));cameraModes.selectedSegment=0
         nameGroup.addArrangedSubview(heading("Nombre"));nameGroup.addArrangedSubview(nameField)
@@ -213,11 +213,14 @@ final class Controller:NSObject, NSApplicationDelegate, NSTextFieldDelegate, NST
         camera.look(at:c,up:SCNVector3(0,1,0),localFront:SCNVector3(0,0,-1));view.pointOfView=camera
     }
     @objc func cameraMode(_ sender:NSSegmentedControl){setCamera(sender.selectedSegment==1)}
-    @objc func modelChanged(){design.model=["sphere","photo","name"][modelPicker.indexOfSelectedItem];fittedKey="";refreshMode();changed()}
+    @objc func modelChanged(){design.model=["sphere","photo","name","paw","mouse"][modelPicker.indexOfSelectedItem];fittedKey="";refreshMode();changed()}
     func refreshMode() {
-        modelPicker.selectItem(at:["sphere","photo","name"].firstIndex(of:design.model) ?? 0)
+        modelPicker.selectItem(at:["sphere","photo","name","paw","mouse"].firstIndex(of:design.model) ?? 0)
         nameGroup.isHidden=design.model=="photo";elementsGroup.isHidden=design.model != "sphere";adjustmentGroup.isHidden=design.model=="photo"
-        selection.isHidden=design.model != "sphere";rows[1].isHidden=design.model != "sphere";rows[2].isHidden=design.model != "sphere"
+        let custom=["paw","mouse"].contains(design.model)
+        selection.isHidden=design.model != "sphere";rows[1].isHidden=design.model != "sphere" && !custom;rows[2].isHidden=design.model != "sphere" && !custom
+        if custom {selection.selectItem(at:0)}
+        if design.model=="mouse" {selection.isHidden=false;selection.item(at:2)?.isHidden=true;selection.item(at:3)?.isHidden=true;elementsGroup.isHidden=false;left.isHidden=true;right.isHidden=true}else{selection.item(at:2)?.isHidden=false;selection.item(at:3)?.isHidden=false;left.isHidden=false;right.isHidden=false}
         rows[0].slider.maxValue=design.model=="name" ? 100 : 150;rows[0].stepper.maxValue=rows[0].slider.maxValue
         window.subtitle=modelPicker.titleOfSelectedItem ?? ""
         refreshRows()
@@ -261,7 +264,7 @@ final class Controller:NSObject, NSApplicationDelegate, NSTextFieldDelegate, NST
         if let id=result["id"] as? Int,id != revision {schedule();return}
         spinner.stopAnimation(nil)
         if let error=result["error"] as? String {status.stringValue=error;setExportEnabled(false);return}
-        if let size=result["sizeMM"] as? [Double],size.count==3 {dimensions.stringValue=String(format:"%.1f × %.1f × %.1f mm",size[0],size[1],size[2])}
+        if let size=result["sizeMM"] as? [Double],size.count==3 {dimensions.stringValue=String(format:"%.2f × %.2f × %.2f cm",size[0]/10,size[1]/10,size[2]/10)}
         if let path=result["preview"] as? String {loadMesh(URL(fileURLWithPath:path))}
         if result["connected"] as? Bool == true,let path=result["file"] as? String {currentFile=URL(fileURLWithPath:path);status.stringValue="";setExportEnabled(true)}
         else{status.stringValue=result["message"] as? String ?? "Revisa las uniones.";setExportEnabled(false)}

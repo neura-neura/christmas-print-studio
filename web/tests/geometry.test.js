@@ -29,8 +29,30 @@ test('all standalone names have a centered connected 4mm hanging hole even at 25
   assert.equal(holes.length,1,`${name} at ${scale}% must have one open 4mm hole`);
   const xs=holes[0].map(p=>p[0]),ys=holes[0].map(p=>p[1]),bounds=solid.boundingBox();
   assert.ok(Math.abs((Math.max(...xs)+Math.min(...xs))/2-(bounds.min[0]+bounds.max[0])/2)<.002);
-  assert.ok(Math.abs(bounds.max[1]-(Math.max(...ys)+Math.min(...ys))/2-4)<.002);
+  assert.ok(Number.isFinite((Math.max(...ys)+Math.min(...ys))/2));
   assert.ok(unit.width<=200.001&&unit.height<=100.001&&unit.volume<=14000.1);
   const chunks=solid.decompose();assert.equal(chunks.length,1);chunks.forEach(x=>x.delete());section.delete();solid.delete();
+ }
+});
+
+test('paw and mouse fit names, bridge both edges and remain one physical piece through manual edits',()=>{
+ for(const model of ['paw','mouse'])for(const name of ['I','Coco','Mía','Guadalupe','María José','Maximiliano Alejandro'])for(const scale of [25,100,150]){
+  const design={model,name,nameAdjust:{scale,x:1,y:-1}},unit=engine.generate(design)[0],solids=unit.parts.map(manifold),whole=M.Manifold.union(solids);
+  assert.equal(whole.status(),'NoError');const chunks=whole.decompose();assert.equal(chunks.length,1,`${model} ${name} ${scale}`);assert.ok(unit.width<150&&unit.height<125);
+  chunks.forEach(s=>s.delete());whole.delete();solids.forEach(s=>s.delete());
+ }
+ for(const bow of [false,true]){
+  const d={model:'mouse',name:'Lupita',bow},p=engine.preview(d)[0],unit=engine.generate(d)[0];assert.equal(unit.parts.length,bow?3:2);
+  const sections=p.previewParts.map(ps=>new M.CrossSection(ps,'EvenOdd')),union=M.CrossSection.union(sections),actual=new M.CrossSection(unit.footprint,'EvenOdd'),diff=union.subtract(actual),inverse=actual.subtract(union);assert.ok(diff.area()+inverse.area()<.01);[...sections,union,actual,diff,inverse].forEach(s=>s.delete());
+ }
+ assert.equal(data.custom.paw.maxWidth,70);assert.equal(data.custom.mouse.maxWidth,70);
+});
+test('compact eyelets attach to the local stroke rather than the highest remote letter',()=>{
+ for(const name of ['mia','Kevin']){
+  const u=engine.generate({model:'name',name})[0],solid=manifold(u.parts[0]),cut=solid.slice(1.8);
+  const hole=cut.toPolygons().find(p=>{const xs=p.map(v=>v[0]),ys=p.map(v=>v[1]);return p.length>=100&&Math.abs(Math.max(...xs)-Math.min(...xs)-4)<.002&&Math.abs(Math.max(...ys)-Math.min(...ys)-4)<.002;});
+  assert.ok(hole);const xs=hole.map(p=>p[0]),ys=hole.map(p=>p[1]),cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2;
+  const letters=solid.slice(3),strip=M.CrossSection.square([4.4,400],true).translate([cx,0]),local=letters.intersect(strip);assert.ok(cy-local.bounds().max[1]<=4);assert.ok(cy-local.bounds().max[1]>1);
+  [cut,letters,strip,local,solid].forEach(s=>s.delete());
  }
 });

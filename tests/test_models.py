@@ -46,8 +46,50 @@ class ModelTests(unittest.TestCase):
                     self.assertEqual(len(holes),1)
                     hole=holes[0];center=(hole[:,:2].min(axis=0)+hole[:,:2].max(axis=0))/2
                     self.assertAlmostEqual(center[0],mesh.bounds[:,0].mean(),delta=.002)
-                    self.assertAlmostEqual(mesh.bounds[1,1]-center[1],4,delta=.002)
+                    self.assertTrue(np.isfinite(center).all())
                     self.assertLessEqual(mesh.extents[0],200.001);self.assertLessEqual(mesh.extents[1],100.001)
+    def test_compact_hanger_blends_at_local_letter_edge_without_a_stalk(self):
+        import numpy as np
+        from shapely.geometry import LineString,box
+        for name in ['mia','Kevin','Lupita']:
+            mesh=engine.standalone_name(name)
+            contours=mesh.section(plane_origin=[0,0,1.8],plane_normal=[0,0,1]).discrete
+            hole=next(p for p in contours if len(p)>=100 and np.allclose(np.ptp(p[:,:2],axis=0),[4,4],atol=.002))
+            cx,cy=(hole[:,:2].min(axis=0)+hole[:,:2].max(axis=0))/2
+            letters=mesh.section(plane_origin=[0,0,3],plane_normal=[0,0,1]).discrete
+            local=[LineString(p[:,:2]).intersection(box(cx-2.2,-200,cx+2.2,200)) for p in letters]
+            top=max(g.bounds[3] for g in local if not g.is_empty)
+            self.assertLessEqual(cy-top,4.0);self.assertGreater(cy-top,1.0)
+
+    def test_new_ornaments_remain_connected_at_varied_names_sizes_and_positions(self):
+        import numpy as np
+        for model in ['paw','mouse']:
+            for name in ['I','Coco','Mía','Guadalupe','María José','Maximiliano Alejandro']:
+                for amount in [25,100,150]:
+                    with self.subTest(model=model,name=name,scale=amount):
+                        parts,names=engine.custom_parts({'model':model,'name':name,'nameAdjust':{'scale':amount,'x':1,'y':-1}})
+                        whole=engine.trimesh.boolean.union(parts,engine='manifold')
+                        self.assertTrue(whole.is_volume);self.assertEqual(len(whole.split()),1)
+                        self.assertLess(whole.extents[0],150);self.assertLess(whole.extents[1],125)
+                        self.assertAlmostEqual(parts[-1].bounds[0,2],0,delta=.001)
+                        letter_points=np.concatenate(parts[-1].section(plane_origin=[0,0,3],plane_normal=[0,0,1]).discrete)[:,:2]
+                        extent=np.ptp(letter_points,axis=0);raw=engine.font_outline(name).bounds
+                        self.assertAlmostEqual(extent[0]/extent[1],(raw[2]-raw[0])/(raw[3]-raw[1]),delta=.001)
+                        center=(letter_points.min(axis=0)+letter_points.max(axis=0))/2
+                        self.assertAlmostEqual(center[0],1,delta=.001)
+                        self.assertAlmostEqual(center[1],engine.ornament_designs()[model]['center'][1]-1,delta=.001)
+                        self.assertEqual(len(parts),3 if model=='mouse' else 2)
+            with tempfile.TemporaryDirectory() as folder:
+                out=Path(folder)/(model+'.3mf');result=engine.generate({'model':model,'name':'Lupita'},out)
+                self.assertTrue(result['connected'])
+                with zipfile.ZipFile(out) as z:
+                    metadata=json.loads(z.read('Metadata/esferas_editor.json'));self.assertEqual(metadata['model'],model)
+                    self.assertEqual(metadata['nameAreaWidthMM'],70)
+                    self.assertEqual(engine.dispatch({'command':'inspect','file':str(out)})['settings']['model'],model)
+                    project=ET.fromstring(z.read('3D/3dmodel.model'));self.assertTrue(project.find(engine.q('build')).find(engine.q('item')).get('transform').startswith('1 0 0'))
+        parts,_=engine.custom_parts({'model':'mouse','name':'Coco','bow':False})
+        self.assertEqual(len(parts),2);self.assertEqual(len(engine.trimesh.boolean.union(parts,engine='manifold').split()),1)
+
     def test_open_original_photo(self):
         self.assertEqual(engine.dispatch({'command':'inspect','file':str(ROOT/'Resources/esfera_con_foto.3mf')})['settings']['model'],'photo')
     def test_name_smaller_size(self):

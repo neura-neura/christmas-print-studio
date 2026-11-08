@@ -3,7 +3,7 @@
 from pathlib import Path
 import subprocess, shutil, sys, plistlib
 ROOT=Path(__file__).resolve().parents[1]
-BUILD=ROOT/'build';DIST=ROOT/'dist';VERSION='2.5.0'
+BUILD=ROOT/'build';DIST=ROOT/'dist';VERSION='2.6.0'
 def run(*args):subprocess.run([str(x) for x in args],cwd=ROOT,check=True)
 def main():
     BUILD.mkdir(exist_ok=True);DIST.mkdir(exist_ok=True)

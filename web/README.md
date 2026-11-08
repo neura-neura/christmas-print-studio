@@ -25,7 +25,7 @@ The build is emitted to `dist/`. Serve it over HTTP/HTTPS rather than opening `i
 
 ## Production workflow
 
-1. Select **Esfera con nombre** (named ornament), **Esfera con foto** (photo ornament), or **Nombre solo** (standalone name).
+1. Select **Esfera con nombre** (named ornament), **Esfera con foto** (photo ornament), **Nombre solo** (standalone name), **Patita con nombre** (paw ornament), or **Ratoncito con moño** (mouse ornament).
 2. Enter one name or paste a list, one name per line. Set quantities and optional decorations.
 3. Review the live preview and add the designs to the order. Tap a product's **Editar diseño** control to edit an existing design.
 4. The planner automatically redistributes the order across plates. Capacity suggestions describe additional copies of designs already in the order; the suggestions are alternatives, not guaranteed to fit simultaneously.
@@ -68,11 +68,17 @@ The native macOS app preserves the prepared original photo project; this small p
 
 The same font is uniformly scaled in X and Y; letters are never stretched to fill a rectangle. The automatic size targets **14,000 mm³** of geometric volume, subject to maximum dimensions of **200 mm width / 100 mm height**. Medium-length names are not forced to reach a limit. Very long names can have a lower volume when constrained by width.
 
-Every name includes a connected hanging eyelet centered on its horizontal bounds. The 4 mm opening and 2 mm ring wall remain usable at every manual scale; the eyelet and its 3 mm neck are 2.4 mm thick. The complete model, including the eyelet, stays inside the size and volume limits.
+Every name includes a connected hanging eyelet centered on its horizontal bounds. The 4 mm opening and 2 mm ring wall remain usable at every manual scale. A rounded, flared shoulder attaches the eyelet directly to the local letter edge, avoiding a long stalk when another letter or accent is taller. The eyelet is 2.4 mm thick. The complete model, including the eyelet, stays inside the size and volume limits.
 
 Letter thickness is 4 mm, with recessed 1.2 mm connection bridges. Manual size adjustment reduces the balanced result to 25–100%. Geometric volume is not identical to filament weight; actual weight depends on slicing, walls, infill, and auxiliary paths.
 
 OpenType.js applies kerning and ligatures. Small outline differences from the native HarfBuzz-based engine are possible.
+
+### Paw and mouse ornaments
+
+Original smooth vector geometry is shared by the native and browser engines in `Resources/ornament_designs.json`. Regenerate it with `scripts/design_ornaments.py`. The paw has four separate toe openings, a lower name area with a 70 mm width reference, and an integrated hanging opening. The mouse has a 70 mm circular inner face, open ears and a perforated bow. Lettering is centered in its own name region and connected to both sides by recessed bridges. Frame/bow thickness is 2.4 mm; lettering is 4 mm with 1.4 mm recessed bridges.
+
+Name scale and position are adjustable. The mouse bow can be hidden, resized or moved; an alternative frame with an integrated hanging loop is used when the bow is off. Disconnected manual bow placements are rejected before export. Previews, saved orders and mixed-plate packing support both new models. The 70 mm reference is a diameter/name width, not a 70 mm radius.
 
 ## Print profile
 

@@ -57,10 +57,42 @@ export function createGeometryEngine(M, assets, fontBuffer) {
       for(const side of [-1,1]){const box=own(own(M.CrossSection.square([60,65],true)).translate([CENTER[0]+side*50,CENTER[1]]));const target=own(ring.intersect(box));const pair=nearest(under,target);let end=pair.b;if(pair.distance>.001){const dx=(end[0]-pair.a[0])/pair.distance,dy=(end[1]-pair.a[1])/pair.distance;end=[end[0]+dx*2.2*SCALE,end[1]+dy*2.2*SCALE];}under=add(under,capsule(pair.a,end,.95*SCALE));}
     return {shape,under};
   }
+  const customTextCache=new Map();
+  function customShapes(design){
+    const spec=assets.custom[design.model],key=JSON.stringify([design.model,design.name,design.nameAdjust,design.bow]);
+    const frame=section(design.bow===false&&spec.noBowFrame?spec.noBowFrame:spec.frame);
+    if(!customTextCache.has(key)){
+      const adj=design.nameAdjust||{},amount=Number(adj.scale??100)/100,x=Number(adj.x||0),y=Number(adj.y||0);
+      if(![amount,x,y].every(Number.isFinite)||amount<.25||amount>1.5||Math.abs(x)>20||Math.abs(y)>20)throw new Error('Ajustes fuera de rango.');
+      let shape=outline(design.name);const b=shape.bounds();const fit=Math.min(spec.maxWidth/(b.max[0]-b.min[0]),spec.maxHeight/(b.max[1]-b.min[1]))*amount;
+      shape=own(own(own(shape.translate([-(b.min[0]+b.max[0])/2,-(b.min[1]+b.max[1])/2])).scale(fit)).translate([spec.center[0]+x,spec.center[1]+y]));
+      let under=connectedShape(shape,.8);
+      for(const side of [-1,1]){
+        const region=own(own(M.CrossSection.square([85,64],true)).translate([spec.center[0]+side*57.5,spec.center[1]]));
+        const target=own(frame.intersect(region)),pair=nearest(under,target);let end=pair.b;
+        if(pair.distance>.001){end=[end[0]+(end[0]-pair.a[0])/pair.distance*1.5,end[1]+(end[1]-pair.a[1])/pair.distance*1.5];}
+        under=add(under,capsule(pair.a,end,1));
+      }
+      customTextCache.set(key,{shape:shape.toPolygons(),under:under.toPolygons()});if(customTextCache.size>20)customTextCache.delete(customTextCache.keys().next().value);
+      return {spec,frame,shape,under};
+    }
+    const saved=customTextCache.get(key);return {spec,frame,shape:section(saved.shape),under:section(saved.under)};
+  }
+  function transformedSection(shape,adjust={}){
+    const amount=Number(adjust.scale??100)/100,x=Number(adjust.x||0),y=Number(adjust.y||0),b=shape.bounds(),cx=(b.min[0]+b.max[0])/2,cy=(b.min[1]+b.max[1])/2;
+    if(![amount,x,y].every(Number.isFinite)||amount<.25||amount>1.5||Math.abs(x)>20||Math.abs(y)>20)throw new Error('Ajustes fuera de rango.');
+    return own(own(own(shape.translate([-cx,-cy])).scale(amount)).translate([cx+x,cy+y]));
+  }
   function generate(design){owned=[];try{
     const mode=design.model||'sphere';let parts=[],labels=[];
     if(mode==='photo'){
       parts=assets.photo.map(importMesh);labels=['Frente y argolla','Tapa trasera'];parts.forEach((s,i)=>assertSolid(s,labels[i]));
+    }else if(mode==='paw'||mode==='mouse'){
+      const {spec,frame,shape,under}=customShapes(design);
+      parts=[extrude(frame,2.4)];labels=[spec.label+' · contorno'];
+      if(spec.bow&&design.bow!==false){parts.push(extrude(transformedSection(section(spec.bow),design.bowAdjust),2.4));labels.push('Moño de lunares');}
+      parts.push(solidUnion([extrude(shape,4),extrude(under,1.4)]));labels.push(`Nombre — ${design.name}`);
+      assertSolid(solidUnion(parts),spec.label);
     }else if(mode==='name'){
       let shape=outline(design.name);let b=shape.bounds();shape=own(shape.translate([-(b.min[0]+b.max[0])/2,-(b.min[1]+b.max[1])/2]));b=shape.bounds();shape=own(shape.scale(Math.min(199.5/(b.max[0]-b.min[0]),99.5/(b.max[1]-b.min[1]))));
       const under=connectedShape(shape,1);let s=solidUnion([extrude(shape,4),extrude(under,1.2)]);b=s.boundingBox();const size=b.max.map((x,i)=>x-b.min[i]);const amount=Number(design.nameOnlyAdjust?.scale??100)/100;if(!Number.isFinite(amount)||amount<.25||amount>1)throw new Error('Usa un tamaño entre 25 y 100 %.');
@@ -68,13 +100,13 @@ export function createGeometryEngine(M, assets, fontBuffer) {
       const original=s,foot=add(shape,under);
       function withHanger(fit){
         const body=own(original.scale([fit,fit,1])),scaledFoot=own(foot.scale(fit)),bounds=scaledFoot.bounds();
-        const cx=(bounds.min[0]+bounds.max[0])/2,cy=bounds.max[1]+3.5;
-        const strip=own(own(M.CrossSection.square([3,bounds.max[1]-bounds.min[1]+2],true)).translate([cx,(bounds.min[1]+bounds.max[1])/2]));
-        const anchor=own(scaledFoot.intersect(strip)).bounds().max[1]-2;
+        const cx=(bounds.min[0]+bounds.max[0])/2;
+        const strip=own(own(M.CrossSection.square([4.4,bounds.max[1]-bounds.min[1]+2],true)).translate([cx,(bounds.min[1]+bounds.max[1])/2]));
+        const anchor=own(scaledFoot.intersect(strip)).bounds().max[1],cy=anchor+2.5;
         const outer=own(own(M.CrossSection.circle(4,128)).translate([cx,cy]));
         const hole=own(own(M.CrossSection.circle(2,128)).translate([cx,cy]));
-        const neck=own(own(M.CrossSection.square([3,cy-anchor],true)).translate([cx,(cy+anchor)/2]));
-        const hanger=own(add(outer,neck).subtract(hole));
+        const shoulder=capsule([cx-2,anchor-1.5],[cx+2,anchor-1.5],1);
+        const hanger=own(own(M.CrossSection.hull([outer,shoulder])).subtract(hole));
         return solidUnion([body,extrude(hanger,2.4)]);
       }
       for(let attempt=0;attempt<8;attempt++){
@@ -100,7 +132,7 @@ export function createGeometryEngine(M, assets, fontBuffer) {
       const bounds=group.solids.map(s=>s.boundingBox());const min=[0,1,2].map(i=>Math.min(...bounds.map(b=>b.min[i])));const max=[0,1,2].map(i=>Math.max(...bounds.map(b=>b.max[i])));const center=[(min[0]+max[0])/2,(min[1]+max[1])/2,min[2]];
       const result=group.solids.map((solid,i)=>({name:group.labels[i],...meshData(own(solid.translate(center.map(x=>-x))))}));
       const footprint=own(own(M.CrossSection.union(group.solids.map(s=>own(s.project())))).translate([-center[0],-center[1]])).toPolygons();
-      return {piece:index,parts:result,footprint,width:max[0]-min[0],height:max[1]-min[1],depth:max[2]-min[2],volume:group.solids.reduce((v,s)=>v+s.volume(),0),label:mode==='photo'?labels[index]:mode==='name'?`Nombre · ${design.name}`:`Esfera · ${design.name}`};
+      return {piece:index,parts:result,footprint,width:max[0]-min[0],height:max[1]-min[1],depth:max[2]-min[2],volume:group.solids.reduce((v,s)=>v+s.volume(),0),label:mode==='photo'?labels[index]:`${mode==='name'?'Nombre':assets.custom?.[mode]?.label||'Esfera'} · ${design.name}`};
     });
   }finally{cleanup();}}
   // Preview keeps the exact text/connection outlines but never rebuilds or
@@ -111,6 +143,14 @@ export function createGeometryEngine(M, assets, fontBuffer) {
     return previewTemplates.get(key);
   }
   function preview(design){
+    if(design.model==='paw'||design.model==='mouse'){
+      owned=[];try{
+        const {spec,frame,shape,under}=customShapes(design),sections=[frame];
+        if(spec.bow&&design.bow!==false)sections.push(transformedSection(section(spec.bow),design.bowAdjust));
+        sections.push(add(shape,under));const bounds=add(...sections).bounds(),width=bounds.max[0]-bounds.min[0],height=bounds.max[1]-bounds.min[1],cx=(bounds.min[0]+bounds.max[0])/2,cy=(bounds.min[1]+bounds.max[1])/2;
+        return [{piece:0,width,height,previewParts:sections.map(s=>own(s.translate([-cx,-cy])).toPolygons())}];
+      }finally{cleanup();}
+    }
     if((design.model||'sphere')!=='sphere')return generate(design).map(({parts,...unit})=>unit);
     owned=[];
     try{

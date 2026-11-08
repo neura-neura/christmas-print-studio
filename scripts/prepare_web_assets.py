@@ -24,7 +24,7 @@ for comp in [joined,back]:
  center=comp.bounds.mean(axis=0);comp.apply_translation([-center[0],-center[1],-comp.bounds[0,2]]);photo.append(encode(comp))
 settings=json.loads(src.read('Metadata/project_settings.config'));settings.update(engine.print_profile()['settings']);settings.update({'enable_support':'0','brim_type':'no_brim','enable_prime_tower':'0','print_sequence':'by layer','draft_shield':'disabled'})
 # 3MF batch profile uses the agreed PLA HS preset, irrespective of the source profile.
-assets={'version':1,'sphere':parts,'photo':photo,'settings':settings,'profile':engine.print_profile(),'sourceAttribution':{'sphere':'AVLR 3D STUDIO / MakerWorld BY-NC-ND','photo':'Craftastic / MakerWorld Exclusive License','font':'Cream Cake Bold / Ef Studio / Personal Use Only'}}
+assets={'version':1,'custom':json.loads((ROOT/'Resources/ornament_designs.json').read_text()),'sphere':parts,'photo':photo,'settings':settings,'profile':engine.print_profile(),'sourceAttribution':{'sphere':'AVLR 3D STUDIO / MakerWorld BY-NC-ND','photo':'Craftastic / MakerWorld Exclusive License','font':'Cream Cake Bold / Ef Studio / Personal Use Only'}}
 (out/'models.json').write_text(json.dumps(assets,separators=(',',':')))
 import shutil
 shutil.copy(ROOT/'Resources/Cream Cake Bold.otf',out/'CreamCakeBold.otf');shutil.copy(ROOT/'Resources/License - READ THIS.txt',out/'FONT-LICENSE.txt')

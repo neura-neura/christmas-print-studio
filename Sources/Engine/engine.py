@@ -139,7 +139,7 @@ def write_project(src,parts,names,out,settings):
         p=ET.SubElement(obj,'part',{'id':str(i),'subtype':'normal_part'})
         for k,v in [('name',name),('extruder','1'),('matrix','1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1')]:ET.SubElement(p,'metadata',{'key':k,'value':v})
         ET.SubElement(p,'mesh_stat',{'face_count':str(len(t.faces)),'edges_fixed':'0','degenerate_facets':'0','facets_removed':'0','facets_reversed':'0','backwards_edges':'0'})
-    if settings.get('model')=='name':
+    if settings.get('model') in ['name','paw','mouse']:
         item=model.find(q('build')).find(q('item'));item.set('transform','1 0 0 0 1 0 0 0 1 128 128 0')
         assemble=config.find('assemble');assemble.clear()
         ET.SubElement(assemble,'assemble_item',{'object_id':obj.get('id'),'instance_id':'0','transform':'1 0 0 0 1 0 0 0 1 128 128 0','offset':'0 0 0'})
@@ -244,12 +244,12 @@ def standalone_name(name,adjust=None):
         body=original.copy();body.apply_scale([fit,fit,1])
         foot=scale(underlay,xfact=fit,yfact=fit,origin=(0,0))
         x0,y0,x1,y1=foot.bounds;cx=(x0+x1)/2
-        anchor=foot.intersection(box(cx-1.5,y0-1,cx+1.5,y1+1))
-        cy=y1+3.5
+        anchor=foot.intersection(box(cx-2.2,y0-1,cx+2.2,y1+1))
+        cy=anchor.bounds[3]+2.5
         outer=Point(cx,cy).buffer(4,quad_segs=32)
         hole=Point(cx,cy).buffer(2,quad_segs=32)
-        neck=box(cx-1.5,anchor.bounds[3]-2,cx+1.5,cy)
-        hanger=unary_union([outer,neck]).difference(hole)
+        shoulder=LineString([(cx-2,anchor.bounds[3]-1.5),(cx+2,anchor.bounds[3]-1.5)]).buffer(1,quad_segs=16)
+        hanger=unary_union([outer,shoulder]).convex_hull.difference(hole)
         return body,trimesh.boolean.union([body,extrude(hanger,2.4,z=0)],engine='manifold')
     for _ in range(8):
         body,result=with_hanger(fit)
@@ -260,6 +260,52 @@ def standalone_name(name,adjust=None):
     mesh=export_mesh(mesh)
     if not mesh.is_volume or len(mesh.split())!=1:raise ValueError('No se pudo conectar el nombre y su argolla.')
     return mesh
+
+@functools.lru_cache(maxsize=1)
+def ornament_designs():
+    return json.loads((ASSETS/'ornament_designs.json').read_text())
+
+def contour_shape(contours):
+    result=Polygon()
+    for points in contours:result=result.symmetric_difference(Polygon(points))
+    return result.buffer(0)
+
+def custom_parts(settings):
+    spec=ornament_designs()[settings['model']];frame=contour_shape(spec['noBowFrame'] if settings.get('bow',True)==False and 'noBowFrame' in spec else spec['frame'])
+    adj=settings.get('nameAdjust') or {};amount=float(adj.get('scale',100))/100
+    x=float(adj.get('x',0));y=float(adj.get('y',0))
+    if not .25<=amount<=1.5 or abs(x)>20 or abs(y)>20:raise ValueError('Ajustes fuera de rango.')
+    shape=font_outline(validate_name(settings.get('name','Lupita')));a,b,c,d=shape.bounds
+    fit=min(spec['maxWidth']/(c-a),spec['maxHeight']/(d-b))*amount
+    shape=translate(scale(translate(shape,-(a+c)/2,-(b+d)/2),xfact=fit,yfact=fit,origin=(0,0)),spec['center'][0]+x,spec['center'][1]+y)
+    under=shape
+    while len(polygons(under))>1:
+        ps=polygons(under);_,i,j=min((ps[i].distance(ps[j]),i,j) for i in range(len(ps)) for j in range(i+1,len(ps)))
+        a,b=nearest_points(ps[i],ps[j]);under=unary_union([under,LineString([a,b]).buffer(.8,quad_segs=12)])
+    cx,cy=spec['center']
+    for side in [-1,1]:
+        region=box(cx-100,cy-32,cx-15,cy+32) if side<0 else box(cx+15,cy-32,cx+100,cy+32)
+        a,b=nearest_points(under,frame.intersection(region));av=np.array(a.coords[0]);bv=np.array(b.coords[0]);direction=bv-av;length=np.linalg.norm(direction)
+        bridge=LineString([av,bv+direction/length*1.5]).buffer(1.0,quad_segs=12) if length>1e-5 else a.buffer(1.2,quad_segs=12)
+        under=unary_union([under,bridge])
+    text=trimesh.boolean.union([extrude(shape,4,z=0),extrude(under,1.4,z=0)],engine='manifold')
+    parts=[extrude(frame,2.4,z=0)];names=[spec['label']+' - contorno']
+    if 'bow' in spec and settings.get('bow',True):
+        bow=extrude(contour_shape(spec['bow']),2.4,z=0);adj=settings.get('bowAdjust') or {};factor=float(adj.get('scale',100))/100;x=float(adj.get('x',0));y=float(adj.get('y',0))
+        if not .25<=factor<=1.5 or abs(x)>20 or abs(y)>20:raise ValueError('Ajustes del moño fuera de rango.')
+        center=bow.bounds.mean(axis=0);bow.apply_translation(-center);bow.apply_scale([factor,factor,1]);bow.apply_translation(center+[x,y,0]);parts.append(bow);names.append('Moño de lunares')
+    parts.append(text);names.append('Nombre - '+settings['name'])
+    return [export_mesh(p) for p in parts],names
+
+def generate_custom(settings,out):
+    name=validate_name(settings.get('name','Lupita'));settings=dict(settings,name=name,printProfile=print_profile()['id'],nameAreaWidthMM=70)
+    parts,names=custom_parts(settings);whole=trimesh.boolean.union(parts,engine='manifold')
+    connected=whole.is_volume and len(whole.split())==1
+    out=Path(out).resolve();out.parent.mkdir(parents=True,exist_ok=True)
+    preview=write_preview(parts,names,out)
+    if connected:
+        src,_=template();write_project(src,parts,names,out,settings)
+    return {'model':settings['model'],'name':name,'file':str(out) if connected else None,'preview':preview,'connected':bool(connected),'sizeMM':whole.extents.round(2).tolist(),'nominalVolumeMM3':round(float(whole.volume),2),'message':'' if connected else 'Una pieza está separada. Acércala al contorno para guardar.'}
 
 def write_preview(parts,names,out,xy_scale=1,z_scale=1):
     scene=[]
@@ -272,7 +318,7 @@ def write_preview(parts,names,out,xy_scale=1,z_scale=1):
 
 def generate_name(settings,out):
     name=validate_name(settings.get('name','Lupita'))
-    settings=dict(settings,model='name',name=name,printProfile=print_profile()['id'],nameSizing='proportional_volume_hanger_v2',nameHangerInnerDiameterMM=4,nameReferenceVolumeMM3=NAME_REFERENCE_VOLUME_MM3)
+    settings=dict(settings,model='name',name=name,printProfile=print_profile()['id'],nameSizing='proportional_volume_hanger_v3',nameHangerInnerDiameterMM=4,nameReferenceVolumeMM3=NAME_REFERENCE_VOLUME_MM3)
     mesh=standalone_name(name,settings.get('nameOnlyAdjust'))
     out=Path(out).resolve();out.parent.mkdir(parents=True,exist_ok=True)
     src,_=template();write_project(src,[mesh],['Nombre - '+name],out,settings)
@@ -313,6 +359,7 @@ def generate_photo(settings,out):
 
 def generate(settings,out):
     mode=settings.get('model','sphere')
+    if mode in ['paw','mouse']:return generate_custom(settings,out)
     if mode=='sphere':return generate_sphere(settings,out)
     if mode=='name':return generate_name(settings,out)
     if mode=='photo':return generate_photo(settings,out)
