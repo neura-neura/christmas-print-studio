@@ -64,7 +64,26 @@ export function createGeometryEngine(M, assets, fontBuffer) {
     }else if(mode==='name'){
       let shape=outline(design.name);let b=shape.bounds();shape=own(shape.translate([-(b.min[0]+b.max[0])/2,-(b.min[1]+b.max[1])/2]));b=shape.bounds();shape=own(shape.scale(Math.min(199.5/(b.max[0]-b.min[0]),99.5/(b.max[1]-b.min[1]))));
       const under=connectedShape(shape,1);let s=solidUnion([extrude(shape,4),extrude(under,1.2)]);b=s.boundingBox();const size=b.max.map((x,i)=>x-b.min[i]);const amount=Number(design.nameOnlyAdjust?.scale??100)/100;if(!Number.isFinite(amount)||amount<.25||amount>1)throw new Error('Usa un tamaño entre 25 y 100 %.');
-      const fit=Math.min(Math.sqrt(SIZING.targetVolume/s.volume()),200/size[0],100/size[1])*amount;s=own(s.scale([fit,fit,1]));assertSolid(s,'El nombre');parts=[s];labels=[`Nombre — ${design.name}`];
+      let fit=Math.min(Math.sqrt(SIZING.targetVolume/s.volume()),200/size[0],100/size[1]);
+      const original=s,foot=add(shape,under);
+      function withHanger(fit){
+        const body=own(original.scale([fit,fit,1])),scaledFoot=own(foot.scale(fit)),bounds=scaledFoot.bounds();
+        const cx=(bounds.min[0]+bounds.max[0])/2,cy=bounds.max[1]+3.5;
+        const strip=own(own(M.CrossSection.square([3,bounds.max[1]-bounds.min[1]+2],true)).translate([cx,(bounds.min[1]+bounds.max[1])/2]));
+        const anchor=own(scaledFoot.intersect(strip)).bounds().max[1]-2;
+        const outer=own(own(M.CrossSection.circle(4,128)).translate([cx,cy]));
+        const hole=own(own(M.CrossSection.circle(2,128)).translate([cx,cy]));
+        const neck=own(own(M.CrossSection.square([3,cy-anchor],true)).translate([cx,(cy+anchor)/2]));
+        const hanger=own(add(outer,neck).subtract(hole));
+        return solidUnion([body,extrude(hanger,2.4)]);
+      }
+      for(let attempt=0;attempt<8;attempt++){
+        s=withHanger(fit);const box=s.boundingBox(),extent=box.max.map((v,i)=>v-box.min[i]);
+        if(s.volume()<=SIZING.targetVolume+.05&&extent[0]<=200.0001&&extent[1]<=100.0001)break;
+        fit*=Math.min(Math.sqrt(SIZING.targetVolume/s.volume()),200/extent[0],92.5/(size[1]*fit))*.999;
+      }
+      if(amount<1)s=withHanger(fit*amount);
+      assertSolid(s,'El nombre y su argolla');parts=[s];labels=[`Nombre — ${design.name} · argolla centrada`];
     }else{
       const {shape,under}=sphereText(design);
       const text=solidUnion([extrude(shape,4),extrude(under,1.4)]);assertSolid(text,'El nombre');

@@ -48,7 +48,9 @@ Download the DMG from **[Releases](https://github.com/neura-neura/christmas-prin
 
 **Requirements:** Apple Silicon Mac, macOS 14 or later. The Python runtime, geometry libraries, and font are bundled; Python and Homebrew are not required on the target machine. The app is locally/ad-hoc signed, **not Developer ID signed or Apple-notarized**.
 
-The Mac app includes the three model types, a live native 3D preview, editable dimensions/positions, a save-location dialog, and temporary 3MF handoff to Bambu Studio. Batch plate production and the latest touch-oriented workflow are features of the web version. The bundled Mac version is **2.4.0**.
+The Mac app includes the three model types, a live native 3D preview, editable dimensions/positions, a save-location dialog, and temporary 3MF handoff to Bambu Studio. Batch plate production and the latest touch-oriented workflow are features of the web version. The bundled Mac version is **2.5.0**.
+
+Standalone names include a centered hanging eyelet with a fixed 4 mm opening. The complete model, including the eyelet, stays within the size and volume limits.
 
 The native photo-ornament mode preserves the supplied prepared project. The web version adds a tiny recessed connection at the hanging loop before treating the front and back as separate packing units; see the [web documentation](web/README.md).
 
@@ -83,7 +85,7 @@ python3.14 -m venv .venv
 .venv/bin/python scripts/build.py
 ```
 
-The script creates `dist/Esferas-2.4.0-arm64.dmg` without installing it. It builds the standalone engine with PyInstaller, compiles the AppKit/SceneKit application, signs it locally, and creates and verifies a drag-to-Applications disk image.
+The script creates `dist/Esferas-2.5.0-arm64.dmg` without installing it. It builds the standalone engine with PyInstaller, compiles the AppKit/SceneKit application, signs it locally, and creates and verifies a drag-to-Applications disk image.
 
 To regenerate the browser model bundle from the native resources:
 

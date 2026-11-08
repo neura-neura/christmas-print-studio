@@ -68,7 +68,9 @@ The native macOS app preserves the prepared original photo project; this small p
 
 The same font is uniformly scaled in X and Y; letters are never stretched to fill a rectangle. The automatic size targets **14,000 mm³** of geometric volume, subject to maximum dimensions of **200 mm width / 100 mm height**. Medium-length names are not forced to reach a limit. Very long names can have a lower volume when constrained by width.
 
-Thickness is 4 mm, with recessed 1.2 mm connection bridges. Manual size adjustment reduces the balanced result to 25–100%. Geometric volume is not identical to filament weight; actual weight depends on slicing, walls, infill, and auxiliary paths.
+Every name includes a connected hanging eyelet centered on its horizontal bounds. The 4 mm opening and 2 mm ring wall remain usable at every manual scale; the eyelet and its 3 mm neck are 2.4 mm thick. The complete model, including the eyelet, stays inside the size and volume limits.
+
+Letter thickness is 4 mm, with recessed 1.2 mm connection bridges. Manual size adjustment reduces the balanced result to 25–100%. Geometric volume is not identical to filament weight; actual weight depends on slicing, walls, infill, and auxiliary paths.
 
 OpenType.js applies kerning and ligatures. Small outline differences from the native HarfBuzz-based engine are possible.
 

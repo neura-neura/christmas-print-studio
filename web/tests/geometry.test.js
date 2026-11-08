@@ -22,3 +22,15 @@ test('live sphere previews match printable outlines through toggles, sizing and 
   [delta,inverse,actual,union,...parts].forEach(x=>x.delete());
  }
 });
+test('all standalone names have a centered connected 4mm hanging hole even at 25 percent',()=>{
+ for(const name of ['I','Mía','Guadalupe','María José','Íñigo','Maximiliano Alejandro'])for(const scale of [25,100]){
+  const unit=engine.generate({model:'name',name,nameOnlyAdjust:{scale}})[0],solid=manifold(unit.parts[0]),section=solid.slice(1.8);
+  const holes=section.toPolygons().filter(p=>{const xs=p.map(v=>v[0]),ys=p.map(v=>v[1]);return p.length>=100&&Math.abs(Math.max(...xs)-Math.min(...xs)-4)<.002&&Math.abs(Math.max(...ys)-Math.min(...ys)-4)<.002;});
+  assert.equal(holes.length,1,`${name} at ${scale}% must have one open 4mm hole`);
+  const xs=holes[0].map(p=>p[0]),ys=holes[0].map(p=>p[1]),bounds=solid.boundingBox();
+  assert.ok(Math.abs((Math.max(...xs)+Math.min(...xs))/2-(bounds.min[0]+bounds.max[0])/2)<.002);
+  assert.ok(Math.abs(bounds.max[1]-(Math.max(...ys)+Math.min(...ys))/2-4)<.002);
+  assert.ok(unit.width<=200.001&&unit.height<=100.001&&unit.volume<=14000.1);
+  const chunks=solid.decompose();assert.equal(chunks.length,1);chunks.forEach(x=>x.delete());section.delete();solid.delete();
+ }
+});

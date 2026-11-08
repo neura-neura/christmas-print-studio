@@ -6,7 +6,7 @@ import trimesh
 import uharfbuzz as hb
 from fontTools.ttLib import TTFont
 from fontTools.pens.basePen import BasePen
-from shapely.geometry import Polygon, LineString
+from shapely.geometry import Polygon, LineString, Point, box
 from shapely.ops import unary_union, nearest_points
 from shapely.affinity import scale, translate
 
@@ -236,10 +236,29 @@ def standalone_name(name,adjust=None):
     # while the dimensional limits can reduce especially long/tall names.
     volume_fit=np.sqrt(NAME_REFERENCE_VOLUME_MM3/mesh.volume)
     limit_fit=min(NAME_MAX_WIDTH_MM/mesh.extents[0],NAME_MAX_HEIGHT_MM/mesh.extents[1])
-    fit=min(volume_fit,limit_fit)*amount
-    mesh.apply_scale([fit,fit,1]);center=mesh.bounds.mean(axis=0);mesh.apply_translation([-center[0],-center[1],-mesh.bounds[0,2]])
+    fit=min(volume_fit,limit_fit)
+    # A fixed-size eyelet stays usable even when the lettering is reduced.
+    # Its center follows the midpoint of the complete word's horizontal bounds.
+    original=mesh
+    def with_hanger(fit):
+        body=original.copy();body.apply_scale([fit,fit,1])
+        foot=scale(underlay,xfact=fit,yfact=fit,origin=(0,0))
+        x0,y0,x1,y1=foot.bounds;cx=(x0+x1)/2
+        anchor=foot.intersection(box(cx-1.5,y0-1,cx+1.5,y1+1))
+        cy=y1+3.5
+        outer=Point(cx,cy).buffer(4,quad_segs=32)
+        hole=Point(cx,cy).buffer(2,quad_segs=32)
+        neck=box(cx-1.5,anchor.bounds[3]-2,cx+1.5,cy)
+        hanger=unary_union([outer,neck]).difference(hole)
+        return body,trimesh.boolean.union([body,extrude(hanger,2.4,z=0)],engine='manifold')
+    for _ in range(8):
+        body,result=with_hanger(fit)
+        if result.volume<=NAME_REFERENCE_VOLUME_MM3+.05 and result.extents[0]<=200.0001 and result.extents[1]<=100.0001:break
+        fit*=min(np.sqrt(NAME_REFERENCE_VOLUME_MM3/result.volume),NAME_MAX_WIDTH_MM/result.extents[0],(NAME_MAX_HEIGHT_MM-7.5)/body.extents[1])*.999
+    mesh=with_hanger(fit*amount)[1] if amount<1 else result
+    center=mesh.bounds.mean(axis=0);mesh.apply_translation([-center[0],-center[1],-mesh.bounds[0,2]])
     mesh=export_mesh(mesh)
-    if len(mesh.split())!=1:raise ValueError('No se pudo conectar todo el nombre.')
+    if not mesh.is_volume or len(mesh.split())!=1:raise ValueError('No se pudo conectar el nombre y su argolla.')
     return mesh
 
 def write_preview(parts,names,out,xy_scale=1,z_scale=1):
@@ -253,7 +272,7 @@ def write_preview(parts,names,out,xy_scale=1,z_scale=1):
 
 def generate_name(settings,out):
     name=validate_name(settings.get('name','Lupita'))
-    settings=dict(settings,model='name',name=name,printProfile=print_profile()['id'],nameSizing='proportional_volume_v1',nameReferenceVolumeMM3=NAME_REFERENCE_VOLUME_MM3)
+    settings=dict(settings,model='name',name=name,printProfile=print_profile()['id'],nameSizing='proportional_volume_hanger_v2',nameHangerInnerDiameterMM=4,nameReferenceVolumeMM3=NAME_REFERENCE_VOLUME_MM3)
     mesh=standalone_name(name,settings.get('nameOnlyAdjust'))
     out=Path(out).resolve();out.parent.mkdir(parents=True,exist_ok=True)
     src,_=template();write_project(src,[mesh],['Nombre - '+name],out,settings)
