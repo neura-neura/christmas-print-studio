@@ -138,3 +138,5 @@ Publication does not extend those permissions. Users/distributors must obtain th
 ## Verification limits
 
 Code and slicing checks reduce preparation errors but do not replace a physical validation print. Adhesion, moisture, calibration, and filament variability still depend on the printer. No automated physical print has been started by this project.
+
+Order quantities can be edited directly or with the plus/minus buttons. Setting an existing design to zero opens a Yes/No removal dialog. Cancel preserves the design and its quantity; confirm removes only that design, saves the order, and offers a 10-second undo restoring its complete quantity. The editor quantity also supports this when editing an existing design.

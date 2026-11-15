@@ -16,3 +16,5 @@
 
 /* Five model choices remain large enough for touch in a wrapping grid. */
 .model-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.model-tab{min-width:0;white-space:normal}.model-tab:nth-child(n+4){grid-column:span 1}@media(max-width:380px){.model-tabs{grid-template-columns:repeat(2,minmax(0,1fr));}}
+
+.order-controls .order-quantity{width:54px;min-width:44px;min-height:48px;padding:4px;text-align:center;font-size:16px;font-variant-numeric:tabular-nums;border:1px solid #cad9bd;border-radius:8px;background:#fffdf8;appearance:textfield}.order-quantity::-webkit-inner-spin-button,.order-quantity::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
