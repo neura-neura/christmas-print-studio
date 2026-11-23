@@ -36,13 +36,14 @@ right=scale(left,xfact=-1,yfact=1,origin=(0,0))
 bow=unary_union([left,right,ellipse(0,51.5,7,7)])
 dots=[(-28,63),(-17,57),(-27,46),(-14,43),(28,63),(17,57),(27,46),(14,43),(0,53)]
 bow=bow.difference(unary_union([Point(x,y).buffer(2.2 if x==0 else 2.3,quad_segs=32) for x,y in dots]))
-# The cat has compact round toes and a wider, scalloped lower pad.
+# Rounded toes, a leading toe and a three-lobed heel follow feline track anatomy.
+# Reference: https://www.nps.gov/places/wildlife-tracks.htm
 cat_pad=curve((-38,-13),[
- ((-44,-25),(-35,-38),(-25,-38)),((-16,-39),(-13,-35),(-8,-37)),
- ((-3,-40),(3,-40),(8,-37)),((13,-35),(16,-39),(25,-38)),
- ((35,-38),(44,-25),(38,-13)),((33,-3),(23,0),(15,9)),
- ((7,19),(-7,19),(-15,9)),((-23,0),(-33,-3),(-38,-13))])
-cat_toes=[(-35,8,13,16,23),(-15,28,14,17,10),(15,28,14,17,-10),(35,8,13,16,-23)]
+ ((-46,-26),(-37,-38),(-26,-38)),((-17,-39),(-16,-31),(-9,-35)),
+ ((-5,-42),(5,-42),(9,-35)),((16,-31),(17,-39),(26,-38)),
+ ((37,-38),(46,-26),(38,-13)),((32,-3),(23,-2),(16,10)),
+ ((10,20),(4,17),(0,13)),((-4,17),(-10,20),(-16,10)),((-23,-2),(-32,-3),(-38,-13))])
+cat_toes=[(-35,8,13,16,23),(-15,30,14,16,10),(15,27,14,16,-10),(35,8,13,16,-23)]
 cat_outer=unary_union([cat_pad,*[ellipse(*t) for t in cat_toes],Point(0,41).buffer(5.3,quad_segs=40)])
 cat_open=cat_pad.buffer(-4.5)
 cat_holes=[ellipse(x,y,rx-4.5,ry-4.5,a).difference(cat_open.buffer(3.5)) for x,y,rx,ry,a in cat_toes]
@@ -57,6 +58,8 @@ tie_half=curve((0,-38),[((-6,-37),(-14,-30),(-16,-34)),((-18,-37),(-18,-47),(-14
 boy_mouse=unary_union([boy_head,tie_half,scale(tie_half,xfact=-1,yfact=1,origin=(0,0)),ellipse(0,-40.5,4,4)])
 for label,shape in [('paw',paw),('mouse',mouse),('bow',bow),('cat',cat),('mouseBoy',boy_mouse)]:
  assert shape.is_valid and shape.geom_type=='Polygon',(label,shape.geom_type)
+assert len(cat.interiors)==6  # Four toes, the name opening and the hanging hole.
+assert len(boy_mouse.interiors)==4  # Two ears, the name opening and the hanging hole.
 print('Frame areas mm²:',round(paw.area),round(mouse.area),'bow',round(bow.area))
 data={'paw':{'label':'Patita con nombre','frame':encode(paw),'center':[0,-22],'maxWidth':70,'maxHeight':29},'mouse':{'label':'Ratoncito con moño','frame':encode(mouse),'bow':encode(bow),'noBowFrame':encode(no_bow),'center':[0,0],'maxWidth':70,'maxHeight':29}}
 data['cat']={'label':'Patita de gato','frame':encode(cat),'center':[0,-19],'maxWidth':70,'maxHeight':27}
