@@ -36,7 +36,7 @@ test('all standalone names have a centered connected 4mm hanging hole even at 25
 });
 
 test('paw and mouse fit names, bridge both edges and remain one physical piece through manual edits',()=>{
- for(const model of ['paw','mouse'])for(const name of ['I','Coco','Mía','Guadalupe','María José','Maximiliano Alejandro'])for(const scale of [25,100,150]){
+ for(const model of ['paw','mouse','cat','mouseBoy'])for(const name of ['I','Coco','Mía','Guadalupe','María José','Maximiliano Alejandro'])for(const scale of [25,100,150]){
   const design={model,name,nameAdjust:{scale,x:1,y:-1}},unit=engine.generate(design)[0],solids=unit.parts.map(manifold),whole=M.Manifold.union(solids);
   assert.equal(whole.status(),'NoError');const chunks=whole.decompose();assert.equal(chunks.length,1,`${model} ${name} ${scale}`);assert.ok(unit.width<150&&unit.height<125);
   chunks.forEach(s=>s.delete());whole.delete();solids.forEach(s=>s.delete());

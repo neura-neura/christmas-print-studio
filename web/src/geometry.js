@@ -87,7 +87,7 @@ export function createGeometryEngine(M, assets, fontBuffer) {
     const mode=design.model||'sphere';let parts=[],labels=[];
     if(mode==='photo'){
       parts=assets.photo.map(importMesh);labels=['Frente y argolla','Tapa trasera'];parts.forEach((s,i)=>assertSolid(s,labels[i]));
-    }else if(mode==='paw'||mode==='mouse'){
+    }else if(Object.hasOwn(assets.custom ?? {},mode)){
       const {spec,frame,shape,under}=customShapes(design);
       parts=[extrude(frame,2.4)];labels=[spec.label+' · contorno'];
       if(spec.bow&&design.bow!==false){parts.push(extrude(transformedSection(section(spec.bow),design.bowAdjust),2.4));labels.push('Moño de lunares');}
@@ -143,7 +143,7 @@ export function createGeometryEngine(M, assets, fontBuffer) {
     return previewTemplates.get(key);
   }
   function preview(design){
-    if(design.model==='paw'||design.model==='mouse'){
+    if(Object.hasOwn(assets.custom ?? {},design.model)){
       owned=[];try{
         const {spec,frame,shape,under}=customShapes(design),sections=[frame];
         if(spec.bow&&design.bow!==false)sections.push(transformedSection(section(spec.bow),design.bowAdjust));
