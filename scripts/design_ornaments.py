@@ -36,18 +36,20 @@ right=scale(left,xfact=-1,yfact=1,origin=(0,0))
 bow=unary_union([left,right,ellipse(0,51.5,7,7)])
 dots=[(-28,63),(-17,57),(-27,46),(-14,43),(28,63),(17,57),(27,46),(14,43),(0,53)]
 bow=bow.difference(unary_union([Point(x,y).buffer(2.2 if x==0 else 2.3,quad_segs=32) for x,y in dots]))
-# Rounded toes, a leading toe and a three-lobed heel follow feline track anatomy.
+# Rounded toes and a three-lobed heel follow feline track anatomy, with symmetry for the ornament.
 # Reference: https://www.nps.gov/places/wildlife-tracks.htm
 cat_pad=curve((-38,-13),[
  ((-46,-26),(-37,-38),(-26,-38)),((-17,-39),(-16,-31),(-9,-35)),
  ((-5,-42),(5,-42),(9,-35)),((16,-31),(17,-39),(26,-38)),
  ((37,-38),(46,-26),(38,-13)),((32,-3),(23,-2),(16,10)),
  ((10,20),(4,17),(0,13)),((-4,17),(-10,20),(-16,10)),((-23,-2),(-32,-3),(-38,-13))])
-cat_toes=[(-35,8,13,16,23),(-15,30,14,16,10),(15,27,14,16,-10),(35,8,13,16,-23)]
-cat_outer=unary_union([cat_pad,*[ellipse(*t) for t in cat_toes],Point(0,41).buffer(5.3,quad_segs=40)])
+cat_left_toes=[(-35,8,13,16,23),(-15,28.5,14,16,10)]
+cat_toes=cat_left_toes+[(-x,y,rx,ry,-angle) for x,y,rx,ry,angle in cat_left_toes]
+cat_hanger_center=Point(0,41)
+cat_outer=unary_union([cat_pad,*[ellipse(*t) for t in cat_toes],cat_hanger_center.buffer(5.3,quad_segs=40)])
 cat_open=cat_pad.buffer(-4.5)
 cat_holes=[ellipse(x,y,rx-4.5,ry-4.5,a).difference(cat_open.buffer(3.5)) for x,y,rx,ry,a in cat_toes]
-cat=Polygon(cat_outer.exterior).difference(unary_union([cat_open,*cat_holes,Point(0,41).buffer(2.3,quad_segs=40)]))
+cat=Polygon(cat_outer.exterior).difference(unary_union([cat_open,*cat_holes,cat_hanger_center.buffer(2.3,quad_segs=40)]))
 
 # A separate mouse silhouette with round ears and a low, integrated bow tie.
 boy_ear_centers=[(-33,30),(33,30)]
@@ -59,6 +61,7 @@ boy_mouse=unary_union([boy_head,tie_half,scale(tie_half,xfact=-1,yfact=1,origin=
 for label,shape in [('paw',paw),('mouse',mouse),('bow',bow),('cat',cat),('mouseBoy',boy_mouse)]:
  assert shape.is_valid and shape.geom_type=='Polygon',(label,shape.geom_type)
 assert len(cat.interiors)==6  # Four toes, the name opening and the hanging hole.
+assert cat.symmetric_difference(scale(cat,xfact=-1,yfact=1,origin=(0,0))).area<1e-6
 assert len(boy_mouse.interiors)==4  # Two ears, the name opening and the hanging hole.
 print('Frame areas mm²:',round(paw.area),round(mouse.area),'bow',round(bow.area))
 data={'paw':{'label':'Patita con nombre','frame':encode(paw),'center':[0,-22],'maxWidth':70,'maxHeight':29},'mouse':{'label':'Ratoncito con moño','frame':encode(mouse),'bow':encode(bow),'noBowFrame':encode(no_bow),'center':[0,0],'maxWidth':70,'maxHeight':29}}
